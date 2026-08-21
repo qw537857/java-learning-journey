@@ -17,8 +17,10 @@
 |------|------|
 | [redis/](./redis/) | Redis 学习笔记 |
 | [redis/redis-demo/](./redis/redis-demo/) | 配套可运行代码示例(SpringBoot 工程) |
+| [rabbitmq/](./rabbitmq/) | RabbitMQ 学习笔记 |
 
 ## ✍️ 更新日志
 
 - 2026-08-20:初始化仓库,第 1 天打卡,完成 Redis 笔记 + 代码示例
 - 2026-08-20:推送 GitHub,统一使用 main 分支,旧版本已清理
+- 2026-08-21:第 2 天打卡,完成 RabbitMQ 笔记(原生客户端 + SpringBoot 集成)
