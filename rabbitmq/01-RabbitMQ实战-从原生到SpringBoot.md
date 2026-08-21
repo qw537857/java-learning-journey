@@ -2,7 +2,7 @@
 
 - **日期**:2026-08-21
 - **一句话总结**:消息队列解决"解耦、异步、削峰"三大问题;本篇把 RabbitMQ 的核心概念、四种交换机、原生 Java 客户端、SpringBoot 集成一次讲透,全部带可运行代码。
-- **配套代码**:原生客户端工程 [rabbitmq-send-demo](./rabbitmq-send-demo/) / [rabbitmq-receive-demo](./rabbitmq-receive-demo/)(纯 Java main 方法跑);SpringBoot 工程 [springboot-send-demo](./springboot-send-demo/)(发送端) / [springboot-receive-demo](./springboot-receive-demo/)(接收端)。
+- **配套代码**:原生客户端工程(纯 Java main 方法跑)与 SpringBoot 工程(发送端/接收端),见文末说明。
 
 ---
 
@@ -74,10 +74,10 @@ public class DirectSend {
     public static void main(String[] args) throws Exception {
         // 1. 连接工厂:IP、端口、账号
         ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost("your-rabbitmq-host");   // 你的 RabbitMQ 地址
+        factory.setHost("your-rabbitmq-host"); // 你的 RabbitMQ 地址
         factory.setPort(5672);                // 注意是 5672,不是管理台 15672!
-        factory.setUsername("root");
-        factory.setPassword("root");
+        factory.setUsername("your-username");
+        factory.setPassword("your-password");
         factory.setVirtualHost("/");
 
         // 2. 物理连接 + 3. 虚拟信道(所有操作都走 Channel)
@@ -119,8 +119,8 @@ public class DirectReceive {
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost("your-rabbitmq-host");
         factory.setPort(5672);
-        factory.setUsername("root");
-        factory.setPassword("root");
+        factory.setUsername("your-username");
+        factory.setPassword("your-password");
 
         Connection connection = factory.newConnection();
         Channel channel = connection.createChannel();
@@ -170,7 +170,7 @@ if (channel.waitForConfirms()) {
 
 ## 六、SpringBoot 集成(重点,工作中 90% 用这个)
 
-**依赖**(springboot-send-demo / springboot-receive-demo 的 pom):
+**依赖**(SpringBoot 发送/接收工程共用):
 
 ```xml
 <dependency>
@@ -185,8 +185,8 @@ if (channel.waitForConfirms()) {
 spring:
   rabbitmq:
     addresses: your-rabbitmq-host1:5672,your-rabbitmq-host2:5672  # 逗号分隔支持多个
-    username: root
-    password: root
+    username: your-username
+    password: your-password
     virtual-host: /
 ```
 

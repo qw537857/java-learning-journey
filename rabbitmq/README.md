@@ -18,7 +18,7 @@
 
 ## 配套代码
 
-笔记内已包含全部可运行代码(原生客户端 + SpringBoot 集成)。完整工程在本地 `本地练习目录` 下:
+笔记内已包含全部可运行代码(原生客户端 + SpringBoot 集成)。完整示例工程保留在本地练习目录下:
 
-- `rabbitmq-send-demo` / `rabbitmq-receive-demo`:原生 Java 客户端(Direct/Fanout/Topic、Confirm、事务)
-- `springboot-send-demo` / `springboot-receive-demo`:SpringBoot 发送/接收工程
+- 原生 Java 客户端工程(Direct/Fanout/Topic、Confirm、事务)
+- SpringBoot 发送/接收工程
