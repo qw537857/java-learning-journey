@@ -264,17 +264,407 @@ public class MyRabbitListener {
 
 ---
 
-## 七、踩坑笔记(血的教训)
+## 七、死信队列(DLX):消息的"垃圾回收站"
+
+### 7.1 什么是死信,为什么需要它
+
+**死信(Dead Letter)**:一条消息进了队列,但**永远无法被正常消费掉**(比如处理失败、过期了、队列满了),这种"判死刑"的消息就叫死信。
+
+**死信队列(DLX,Dead Letter Exchange)**:专门收留死信的队列。正常队列可以配置"我这边处理不掉的消息,转给哪个交换机",那个交换机再把消息路由到死信队列里。
+
+**大白话**:正常队列像个"待办箱",处理不了的单子不直接扔掉,而是扔进一个"废单箱",后面有人专门处理废单(排查、补偿、重试)。
+
+**为什么要搞这么麻烦,直接丢掉不行吗?** 不行。很多消息丢不得:下单消息处理失败,直接丢=订单丢了。进死信队列后,可以:
+- **排查问题**:看死信里的消息内容,定位为什么处理失败
+- **补偿重放**:修好 bug 后,把死信重新投递回去
+- **做延迟队列**(见第八节,最经典的用法)
+
+### 7.2 消息什么时候会变成死信(三种来源,面试必答)
+
+| 来源 | 触发条件 | 大白话 |
+|------|----------|--------|
+| **消息被拒绝** | 消费者 `basicReject` / `basicNack` 且 `requeue=false` | 消费者明确说"这条我不要了,也别放回队列" |
+| **消息过期** | 队列设置了 TTL,消息在队列里待太久 | 消息在队列里"饿死"了 |
+| **队列满了** | 队列设置了最大长度,新消息把队头的挤掉 | 待办箱满了,最早的单子被挤出去 |
+
+> 面试口径:死信三来源 = **拒收(requeue=false)** + **TTL 过期** + **队列长度超限**。
+
+### 7.3 配置示例:普通队列 + 死信交换机 + 死信队列(完整代码)
+
+在 SpringBoot 工程里,用 `@Bean` 声明一套"普通队列 + 死信交换机 + 死信队列":
+
+```java
+package com.example.rabbitmq.config;
+
+import org.springframework.amqp.core.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * 死信队列(DLX)配置:
+ * 普通队列 normal.queue 处理不了的消息 -> dlx.exchange -> dlx.queue
+ */
+@Configuration
+public class DlxConfig {
+
+    // ---------- 普通队列:声明时挂上"死信参数" ----------
+    @Bean
+    public Queue normalQueue() {
+        Map<String, Object> args = new HashMap<>();
+        // 死信交换机:normal.queue 的死信都发到这里
+        args.put("x-dead-letter-exchange", "dlx.exchange");
+        // 死信路由键:死信发到 dlx.exchange 时用的路由键(用于匹配死信队列)
+        args.put("x-dead-letter-routing-key", "dlx.key");
+        return new Queue("normal.queue", true, false, false, args);
+    }
+
+    @Bean
+    public DirectExchange normalExchange() {
+        return new DirectExchange("normal.exchange");
+    }
+
+    @Bean
+    public Binding normalBinding() {
+        return BindingBuilder.bind(normalQueue()).to(normalExchange()).with("normal.key");
+    }
+
+    // ---------- 死信交换机 + 死信队列 ----------
+    @Bean
+    public DirectExchange dlxExchange() {
+        return new DirectExchange("dlx.exchange");
+    }
+
+    @Bean
+    public Queue dlxQueue() {
+        return new Queue("dlx.queue", true);
+    }
+
+    @Bean
+    public Binding dlxBinding() {
+        return BindingBuilder.bind(dlxQueue()).to(dlxExchange()).with("dlx.key");
+    }
+}
+```
+
+**坑提前标**:死信参数是在**声明队列时**写死的。队列已经存在后再改参数(比如换死信交换机),启动会报 `PRECONDITION_FAILED`,需要先删掉旧队列再重启(管理台或 `rabbitmqctl delete_queue normal.queue`)。
+
+### 7.4 演示:消费失败 -> 进死信
+
+消费者监听普通队列,模拟处理失败并"拒收且不重回队列":
+
+```java
+package com.example.rabbitmq.listener;
+
+import com.rabbitmq.client.Channel;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.support.AmqpHeaders;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+
+@Component
+public class NormalQueueConsumer {
+
+    @RabbitListener(queues = "normal.queue")
+    public void onMessage(Message message, Channel channel,
+                          @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
+        String msg = new String(message.getBody());
+        System.out.println("普通队列收到:" + msg + ",模拟处理失败...");
+
+        // 第二个参数 multiple=false:只拒绝这一条
+        // 第三个参数 requeue=false:不重回队列 -> 这条消息变成死信,被扔到 dlx.exchange
+        channel.basicNack(tag, false, false);
+    }
+}
+```
+
+再监听死信队列,看消息是否"死后重生":
+
+```java
+package com.example.rabbitmq.listener;
+
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
+
+@Component
+public class DlxQueueConsumer {
+
+    @RabbitListener(queues = "dlx.queue")
+    public void onMessage(String message) {
+        System.out.println("死信队列收到(处理失败的那条在这里):" + message);
+    }
+}
+```
+
+> 发送一条消息到 `normal.exchange`(路由键 `normal.key`),控制台会依次打印:普通队列收到 → 死信队列收到。管理台里也能看到 `dlx.queue` 里堆积的消息。
+
+---
+
+## 八、延迟队列:TTL + 死信实现"定时任务"
+
+### 8.1 什么是延迟队列,用在哪
+
+**延迟队列**:消息发出去后**不立刻被消费**,等 N 秒/分钟后再给消费者。
+
+**典型场景**(面试最爱问):
+
+| 场景 | 大白话 |
+|------|--------|
+| 下单 30 分钟未支付自动关单 | 订单消息延迟 30 分钟,到点检查"付没付钱,没付就关单" |
+| 超时未确认自动取消 | 预约/订座 15 分钟不确认,自动释放 |
+| 定时通知 | 开播前 10 分钟提醒用户 |
+
+> 不用延迟队列的土办法:定时任务轮询订单表("扫一遍,超时的关掉")。数据量大了就是全表扫描,延迟也不精确。延迟队列是"每条消息自带闹钟",到点精准触发。
+
+### 8.2 RabbitMQ 没有现成的延迟队列,两种实现
+
+| 方案 | 原理 | 适用 |
+|------|------|------|
+| **TTL + 死信(推荐,零依赖)** | 消息进普通队列时设 TTL,过期后变死信进死信队列,消费者只监听死信队列 | 所有消息延迟**相同时间**(比如统一 30 分钟) |
+| **延迟插件**(rabbitmq_delayed_message_exchange) | 装官方插件,消息自带延迟时间 | 每条消息延迟**不同时间**,更灵活 |
+
+### 8.3 TTL + 死信方案:完整可运行代码
+
+复用 7.3 的配置,只要给普通队列加上 TTL 参数(改一处):
+
+```java
+// DlxConfig 里 normalQueue() 的参数追加一行:
+args.put("x-message-ttl", 30000);   // 消息在队列里最多待 30 秒,到期变死信
+```
+
+完整版 normalQueue():
+
+```java
+@Bean
+public Queue normalQueue() {
+    Map<String, Object> args = new HashMap<>();
+    args.put("x-dead-letter-exchange", "dlx.exchange");   // 到期后进哪个交换机
+    args.put("x-dead-letter-routing-key", "dlx.key");      // 到期后用什么路由键
+    args.put("x-message-ttl", 30000);                      // 30 秒没人消费就"过期"
+    return new Queue("normal.queue", true, false, false, args);
+}
+```
+
+流程:
+
+```
+生产者 --30秒TTL--> normal.queue(睡30秒) --过期--> dlx.exchange --> dlx.queue --> 消费者
+```
+
+**消费者只监听 dlx.queue 就行**:normal.queue 不需要任何消费者,它的作用只是"让消息睡 30 秒"。
+
+```java
+package com.example.rabbitmq.listener;
+
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
+
+@Component
+public class DelayConsumer {
+
+    @RabbitListener(queues = "dlx.queue")
+    public void onMessage(String message) {
+        System.out.println("延迟 30 秒后我才收到:" + message);
+    }
+}
+```
+
+生产者照常发到 normal.exchange 即可,唯一区别是消息要**等 30 秒**才会出现在 dlx.queue。
+
+### 8.4 经典大坑:TTL 是按"队头"算的,不是按每条算的
+
+RabbitMQ 的 TTL 过期检查是:**只看队头消息**(先进队列的那条)。
+
+```
+队列:[A(30秒) B(10秒)]
+```
+
+A 是队头、TTL 30 秒;B 在 A 后面、TTL 10 秒。B 的 10 秒到了**不会立刻过期**,必须等 A 先到期出队,B 才开始计时。结果 B 实际等了 30+ 秒才被处理。
+
+**影响**:想用 TTL+DLX 做"每条消息各自延迟不同时间"会不准。要么所有消息统一延迟时间,要么用官方延迟插件(每条消息独立延迟,精确)。
+
+---
+
+## 九、消费端手动 ACK + 消息幂等(面试高频)
+
+### 9.1 为什么默认的自动 ACK 不安全
+
+SpringBoot 默认 `acknowledge-mode: auto`(自动确认):**消息一到消费者手里就标记"已消费"**,不管业务代码有没有处理成功。
+
+```
+消费者拿到消息 -> 立刻 ACK -> 业务代码崩了 -> 消息已确认,丢了
+```
+
+**手动 ACK 流程**:
+
+```
+消费者拿到消息 -> 业务处理 -> 成功才 ACK / 失败 NACK(可重回队列)
+```
+
+业务没处理完,消息一直处于 unacked 状态,消费者挂了 RabbitMQ 会重新投递给别的消费者——**消息不丢**。
+
+### 9.2 配置 + 完整代码
+
+application.yml 开启手动 ACK:
+
+```yaml
+spring:
+  rabbitmq:
+    host: your-mq-host
+    port: 5672
+    username: your-username
+    password: your-password
+    listener:
+      simple:
+        acknowledge-mode: manual   # 手动确认,处理成功才 ACK
+        prefetch: 1                # 每次只取 1 条,处理完再取(配合手动 ACK 防堆积)
+```
+
+消费者代码:
+
+```java
+package com.example.rabbitmq.listener;
+
+import com.rabbitmq.client.Channel;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.support.AmqpHeaders;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+
+@Component
+public class ManualAckConsumer {
+
+    @RabbitListener(queues = "order.queue")
+    public void onMessage(Message message, Channel channel,
+                          @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
+        String msg = new String(message.getBody());
+        try {
+            // TODO 真正的业务处理(写库、调接口...)
+            System.out.println("处理成功:" + msg);
+            channel.basicAck(tag, false);        // 成功:确认,消息出队
+        } catch (Exception e) {
+            System.out.println("处理失败:" + msg);
+            // 第三个参数 requeue:true = 放回队列重试;false = 进死信/丢弃
+            channel.basicNack(tag, false, true); // 失败:重回队列,让别的消费者重试
+        }
+    }
+}
+```
+
+> `@Header(AmqpHeaders.DELIVERY_TAG)` 拿到这条消息的投递编号,ACK 时要用它告诉 RabbitMQ"确认的是哪条"。
+
+**坑提前标**:`basicNack` 第三个参数 `requeue=true` 时,如果业务**一直失败**,消息会无限循环重试,把消费者拖死。正确姿势:重试几次后 `requeue=false` 丢进死信队列(配合第七节),人工介入。
+
+### 9.3 幂等:MQ 会重复投递,消费必须"做一次和做 N 次结果一样"
+
+**为什么会有重复消息**:RabbitMQ 保证的是 **at-least-once(至少一次)**,不保证 exactly-once。典型场景:消费者处理完消息、还没来得及 ACK 就挂了 → RabbitMQ 认为没消费 → 重新投递 → **同一条消息被处理两次**。
+
+**大白话**:"至少一次"= 消息不会丢,但可能**多发一次**。所以消费者要防"同一件事干两遍"(比如重复下单、重复扣款)。
+
+### 9.4 两种主流幂等方案(带代码)
+
+**方案一:Redis setnx 记录消息 ID(推荐,快)**
+
+```java
+package com.example.rabbitmq.listener;
+
+import com.rabbitmq.client.Channel;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.support.AmqpHeaders;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
+@Component
+public class IdempotentConsumer {
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
+    @RabbitListener(queues = "order.queue")
+    public void onMessage(Message message, Channel channel,
+                          @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
+        String body = new String(message.getBody());
+        // 消息 ID 由生产者生成并放进 header(生产端:MessageProperties.setMessageId())
+        String messageId = message.getMessageProperties().getMessageId();
+
+        // setnx:key 不存在才设置成功。第一次处理返回 true,重复投递返回 false
+        Boolean first = redisTemplate.opsForValue()
+                .setIfAbsent("mq:msg:" + messageId, "1", 1, TimeUnit.DAYS);
+        if (first == null || !first) {
+            System.out.println("重复消息,直接确认丢弃:" + messageId);
+            channel.basicAck(tag, false);   // 已处理过,确认掉,不重复处理
+            return;
+        }
+
+        try {
+            // TODO 真正的业务处理(只有第一次会走到这里)
+            channel.basicAck(tag, false);
+        } catch (Exception e) {
+            channel.basicNack(tag, false, true);
+        }
+    }
+}
+```
+
+**方案二:数据库唯一键(最稳,业务上强约束)**
+
+给业务表加一个 `message_id` 唯一索引,消费时直接 insert:
+
+```sql
+-- 建表时加唯一索引
+CREATE TABLE t_order_record (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    message_id VARCHAR(64) NOT NULL,
+    order_no VARCHAR(32) NOT NULL,
+    UNIQUE KEY uk_message_id (message_id)
+);
+```
+
+```java
+// 消费逻辑:先插记录,插得进去 = 第一次;插不进去(唯一键冲突) = 重复,直接跳过
+// try { orderRecordMapper.insert(record); }   // 第一次:成功
+// catch (DuplicateKeyException e) { 重复消息,跳过处理 }
+```
+
+| 方案 | 优点 | 缺点 |
+|------|------|------|
+| Redis setnx | 快、不侵入业务表 | Redis 要可用;key 要设过期时间防内存涨 |
+| 数据库唯一键 | 最可靠,和业务数据同库同事务 | 要改表结构;高并发下唯一索引有开销 |
+
+> 面试口径:MQ 是 at-least-once → 可能重复 → 消费端幂等。方案:Redis setnx / DB 唯一键 / 状态机判断。
+
+---
+
+## 十、踩坑笔记(血的教训)
 
 1. **端口搞错**:连接用 **5672**(AMQP 协议端口),15672 是网页管理台端口,连不上就是这问题。
 2. **监听器不生效**:`@RabbitListener` 所在类必须有 `@Component`/`@Service`,否则不在容器里,永远收不到消息。
 3. **虚拟主机(vhost)不匹配**:账号和 vhost 要配对,默认 `/`,配错了报 `ACCESS_REFUSED`。
 4. **交换机/队列参数不一致**:同名队列重复声明时参数(持久化等)必须一致,否则报 `PRECONDITION_FAILED`。
+5. **TTL 按队头算**:队列里 A 在 B 前面,A 没到期,B 先到期也不会触发,要等 A 出队。想每条消息独立延迟,用官方延迟插件。
+6. **nack 的 requeue 参数别乱用**:`requeue=true` 且业务一直失败 → 无限重试循环拖死消费者;`requeue=false` 又没配死信 → 消息直接丢。正确组合:重试几次后进死信。
+7. **手动 ACK 忘了 ack/nack**:消息一直 unacked,`prefetch=1` 时消费者会被自己卡死(拿不到新消息)。
+8. **自动 ACK 丢消息**:默认 auto 模式消息一到就确认,消费者处理中挂了消息就没了。需要"不丢消息"的必须改 manual。
+9. **队列参数改了不生效**:死信/TTL 参数在声明队列时定死,改参数必须删旧队列重建,否则 `PRECONDITION_FAILED`。
 
 ---
 
-## 八、下一步(路线图)
+## 十一、下一步(路线图)
 
-- [ ] 02 深入:死信队列(DLX)+ 延迟队列(插件/TTL 实现)
-- [ ] 03 深入:消费端手动 ACK + 消息幂等性
-- [ ] 04 深入:集群与镜像队列
+- [x] ~~02 深入:死信队列(DLX)+ 延迟队列~~ → **已并入本篇第七、八节**
+- [x] ~~03 深入:消费端手动 ACK + 消息幂等性~~ → **已并入本篇第九节**
+- [ ] 02 深入:集群与镜像队列
