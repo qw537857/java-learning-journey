@@ -19,6 +19,7 @@
 | [redis/redis-demo/](./redis/redis-demo/) | 配套可运行代码示例(SpringBoot 工程) |
 | [rabbitmq/](./rabbitmq/) | RabbitMQ 学习笔记 |
 | [canal/](./canal/) | Canal 学习笔记 |
+| [high-concurrency/](./high-concurrency/) | 高并发三件套:ES 全文检索 + Redis 高并发统计 + JWT 认证 |
 
 ## ✍️ 更新日志
 
@@ -27,3 +28,4 @@
 - 2026-08-21:第 2 天打卡,完成 RabbitMQ 笔记(原生客户端 + SpringBoot 集成)
 - 2026-08-24:第 3 天打卡,完成 Canal 笔记(binlog 原理 + SpringBoot 集成 + 踩坑)
 - 2026-08-25:第 4 天打卡,补全 RabbitMQ 笔记(死信队列 + 延迟队列 + 手动 ACK + 幂等)
+- 2026-08-26:第 5 天打卡,高并发三件套笔记(ES 全文检索 + Redis 高并发统计 + JWT 认证)
