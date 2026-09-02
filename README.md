@@ -20,6 +20,7 @@
 | [rabbitmq/](./rabbitmq/) | RabbitMQ 学习笔记 |
 | [canal/](./canal/) | Canal 学习笔记 |
 | [high-concurrency/](./high-concurrency/) | 高并发三件套:ES 全文检索 + Redis 高并发统计 + JWT 认证 |
+| [linux/](./linux/) | Linux 基础入门笔记 |
 
 ## ✍️ 更新日志
 
@@ -30,3 +31,4 @@
 - 2026-08-25:第 4 天打卡,补全 RabbitMQ 笔记(死信队列 + 延迟队列 + 手动 ACK + 幂等)
 - 2026-08-26:第 5 天打卡,高并发三件套笔记(ES 全文检索 + Redis 高并发统计 + JWT 认证)
 - 2026-08-27:补全 Redis 深入篇(缓存穿透/击穿/雪崩 + 分布式锁演进 + RDB vs AOF)
+- 2026-09-01:Linux 基础入门笔记(内核/发行版/常用命令/网络配置,补推)
