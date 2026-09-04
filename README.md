@@ -22,7 +22,7 @@
 | [high-concurrency/](./high-concurrency/) | 高并发三件套:ES 全文检索 + Redis 高并发统计 + JWT 认证 |
 | [linux/](./linux/) | Linux 基础入门笔记 |
 | [docker/](./docker/) | Docker 学习笔记(入门概念 + 容器操作 + Dockerfile + 数据卷/Compose + Java 部署) |
-| [interview/](./interview/) | 面试题精讲(HashMap 源码 + Synchronized + Volatile/JMM + 线程池) |
+| [java-source-concurrency/](./java-source-concurrency/) | 集合源码与并发面试题(HashMap 源码剖析 + Synchronized/Volatile + 线程池) |
 
 ## ✍️ 更新日志
 
