@@ -22,6 +22,7 @@
 | [high-concurrency/](./high-concurrency/) | 高并发三件套:ES 全文检索 + Redis 高并发统计 + JWT 认证 |
 | [linux/](./linux/) | Linux 基础入门笔记 |
 | [docker/](./docker/) | Docker 学习笔记(入门概念 + 容器操作 + Dockerfile + 数据卷/Compose + Java 部署) |
+| [interview/](./interview/) | 面试题精讲(HashMap 源码 + Synchronized + Volatile/JMM + 线程池) |
 
 ## ✍️ 更新日志
 
@@ -34,3 +35,4 @@
 - 2026-08-27:补全 Redis 深入篇(缓存穿透/击穿/雪崩 + 分布式锁演进 + RDB vs AOF)
 - 2026-09-01:Linux 基础入门笔记(内核/发行版/常用命令/网络配置,补推)
 - 2026-09-03:Docker 学习笔记(虚拟化/三大概念/容器操作/镜像与 Dockerfile/数据卷与 Compose/Java 项目部署实战)
+- 2026-09-04:面试题精讲(一)(HashMap 源码剖析 + Synchronized 原理 + Volatile/JMM + 线程池源码剖析)
