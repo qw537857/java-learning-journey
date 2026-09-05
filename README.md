@@ -19,10 +19,13 @@
 | [redis/redis-demo/](./redis/redis-demo/) | 配套可运行代码示例(SpringBoot 工程) |
 | [rabbitmq/](./rabbitmq/) | RabbitMQ 学习笔记 |
 | [canal/](./canal/) | Canal 学习笔记 |
-| [high-concurrency/](./high-concurrency/) | 高并发三件套:ES 全文检索 + Redis 高并发统计 + JWT 认证 |
+| [mysql-ha/](./mysql-ha/) | MySQL 高可用与扩展(主从复制/集群/备份恢复/读写分离/分库分表) |
+| [elasticsearch/](./elasticsearch/) | Elasticsearch 全文检索实战(倒排索引 + IK 分词 + 高亮) |
+| [jwt/](./jwt/) | JWT 认证原理与 Spring Security 集成 |
 | [linux/](./linux/) | Linux 基础入门笔记 |
 | [docker/](./docker/) | Docker 学习笔记(入门概念 + 容器操作 + Dockerfile + 数据卷/Compose + Java 部署) |
-| [java-source-concurrency/](./java-source-concurrency/) | 集合源码与并发面试题(HashMap 源码剖析 + Synchronized/Volatile + 线程池) |
+| [collection-source/](./collection-source/) | 集合源码剖析(面试题精讲:HashMap 源码) |
+| [java-concurrency/](./java-concurrency/) | Java 并发原理(Synchronized + Volatile/JMM + 线程池) |
 | [hutool/](./hutool/) | HuTool 工具库学习笔记(断言/字符串/集合/日期/转换/JSON/Spring 集成) |
 
 ## ✍️ 更新日志
@@ -38,3 +41,4 @@
 - 2026-09-03:Docker 学习笔记(虚拟化/三大概念/容器操作/镜像与 Dockerfile/数据卷与 Compose/Java 项目部署实战)
 - 2026-09-04:面试题精讲(一)(HashMap 源码剖析 + Synchronized 原理 + Volatile/JMM + 线程池源码剖析)
 - 2026-09-05:HuTool 学习笔记(入门与断言 + 高频核心工具类 + 集合/日期/Bean 转换 + JSON 与 Spring 集成)
+- 2026-09-05:目录重组——按技术主题拆分:high-concurrency → elasticsearch/、redis/(高并发统计并入)、jwt/;java-source-concurrency → collection-source/、java-concurrency/;根 README 补上 mysql-ha 目录
