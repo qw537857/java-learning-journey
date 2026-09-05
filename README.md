@@ -23,6 +23,7 @@
 | [linux/](./linux/) | Linux 基础入门笔记 |
 | [docker/](./docker/) | Docker 学习笔记(入门概念 + 容器操作 + Dockerfile + 数据卷/Compose + Java 部署) |
 | [java-source-concurrency/](./java-source-concurrency/) | 集合源码与并发面试题(HashMap 源码剖析 + Synchronized/Volatile + 线程池) |
+| [hutool/](./hutool/) | HuTool 工具库学习笔记(断言/字符串/集合/日期/转换/JSON/Spring 集成) |
 
 ## ✍️ 更新日志
 
@@ -36,3 +37,4 @@
 - 2026-09-01:Linux 基础入门笔记(内核/发行版/常用命令/网络配置,补推)
 - 2026-09-03:Docker 学习笔记(虚拟化/三大概念/容器操作/镜像与 Dockerfile/数据卷与 Compose/Java 项目部署实战)
 - 2026-09-04:面试题精讲(一)(HashMap 源码剖析 + Synchronized 原理 + Volatile/JMM + 线程池源码剖析)
+- 2026-09-05:HuTool 学习笔记(入门与断言 + 高频核心工具类 + 集合/日期/Bean 转换 + JSON 与 Spring 集成)
