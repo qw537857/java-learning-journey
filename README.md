@@ -27,6 +27,7 @@
 | [collection-source/](./collection-source/) | 集合源码剖析(面试题精讲:HashMap 源码) |
 | [java-concurrency/](./java-concurrency/) | Java 并发原理(Synchronized + Volatile/JMM + 线程池) |
 | [hutool/](./hutool/) | HuTool 工具库学习笔记(断言/字符串/集合/日期/转换/JSON/Spring 集成) |
+| [springboot/](./springboot/) | Spring Boot 面试专题笔记(22 问,初级视角) |
 
 ## ✍️ 更新日志
 
@@ -42,3 +43,4 @@
 - 2026-09-04:面试题精讲(一)(HashMap 源码剖析 + Synchronized 原理 + Volatile/JMM + 线程池源码剖析)
 - 2026-09-05:HuTool 学习笔记(入门与断言 + 高频核心工具类 + 集合/日期/Bean 转换 + JSON 与 Spring 集成)
 - 2026-09-05:目录重组——按技术主题拆分:high-concurrency → elasticsearch/、redis/(高并发统计并入)、jwt/;java-source-concurrency → collection-source/、java-concurrency/;根 README 补上 mysql-ha 目录
+- 2026-09-07:Spring Boot 面试专题笔记(22 问,初级视角,单文件 springboot.md)
