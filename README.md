@@ -28,7 +28,7 @@
 | [java-concurrency/](./java-concurrency/) | Java 并发原理(Synchronized + Volatile/JMM + 线程池) |
 | [hutool/](./hutool/) | HuTool 工具库学习笔记(断言/字符串/集合/日期/转换/JSON/Spring 集成) |
 | [springboot/](./springboot/) | Spring Boot 面试专题笔记(22 问,初级视角) |
-| [ai/](./ai/) | AI 系列:认识 AI 与大模型部署(✅ 已更新)、SpringAI 实战(📅 明日) |
+| [ai/](./ai/) | AI 系列:认识 AI 与大模型部署、SpringAI 实战(快速入门/Tool Calling/RAG/多模态) |
 
 ## ✍️ 更新日志
 
@@ -46,3 +46,4 @@
 - 2026-09-05:目录重组——按技术主题拆分:high-concurrency → elasticsearch/、redis/(高并发统计并入)、jwt/;java-source-concurrency → collection-source/、java-concurrency/;根 README 补上 mysql-ha 目录
 - 2026-09-07:Spring Boot 面试专题笔记(22 问,初级视角,单文件 springboot.md)
 - 2026-09-08:AI 系列开篇 ai/01-认识AI与大模型部署(AI时代/LLM原理/部署与API调用/技术架构),ai/02-SpringAI实战明日更新
+- 2026-09-10:AI 系列 ai/02-SpringAI实战(快速入门 + 日志/会话记忆 + 纯Prompt/提示词工程 + Tool Calling + RAG/ChatPDF + 多模态与拓展)
